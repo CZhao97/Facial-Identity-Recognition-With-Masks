@@ -27,6 +27,7 @@ def split_data(dataset_path, batch_size=64):
                                     transforms.RandomHorizontalFlip(),  # flip images
                                     # transforms.RandomAffine(30), # Random affine transformation of the image keeping center invariant.
                                     # transforms.CenterCrop(224),
+                                    # TODO: standardization
                                     transforms.ToTensor()])
 
     training_dataset = datasets.ImageFolder(root=dataset_path, transform=transform)
@@ -109,7 +110,7 @@ class simpleCNN(nn.Module):
         self.conv1 = nn.Conv2d(in_channels=3, out_channels=16, kernel_size=(3, 3))
         self.pool = nn.MaxPool2d(2, 2)  # kernel_size, stride
         self.conv2 = nn.Conv2d(in_channels=16, out_channels=32, kernel_size=(3, 3))
-        self.fc1 = nn.Linear(32 * 54 * 54, 200)
+        self.fc1 = nn.Linear(32 * 33 * 54, 200)
         self.fc2 = nn.Linear(200, 41)
         self.batchnorm1 = nn.BatchNorm2d(16)
         self.batchnorm2 = nn.BatchNorm2d(32)
@@ -117,7 +118,7 @@ class simpleCNN(nn.Module):
     def forward(self, x):
         x = self.pool(F.leaky_relu(self.batchnorm1(self.conv1(x))))
         x = self.pool(F.leaky_relu(self.batchnorm2(self.conv2(x))))
-        x = x.view(-1, 32 * 54 * 54)
+        x = x.view(-1, 32 * 33 * 54)
         x = F.leaky_relu(self.fc1(x))
         x = self.fc2(x)
         return x
@@ -145,6 +146,7 @@ def get_accuracy(model, data_loader, grey_images_flag=False):
 
             imgs = torch.tensor(np.tile(grey_images, [1, 3, 1, 1]))
 
+        imgs = imgs[:, :, 0:140, :]
         # imgs = alexnet.features(imgs)
         # imgs = lbp_image(imgs)
 
@@ -238,6 +240,15 @@ def train(model, dataset_path, opt, batch_size=64, learning_rate=0.001, epochs=3
             # imgs = lbp_image(imgs)
 
             # imgs = alexnet.features(imgs)
+
+            imgs = imgs[:, :, 0:140, :]
+            image = imgs[0]
+            # place the colour channel at the end, instead of at the beginning
+            img = np.transpose(image.cpu().numpy(), [1, 2, 0])
+            # normalize pixel intensity values to [0, 1]
+            plt.axis('off')
+            plt.imshow(img)
+            plt.show()
 
             #############################################
             # To Enable GPU Usage
